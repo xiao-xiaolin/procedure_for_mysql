@@ -1,0 +1,48 @@
+CREATE  PROCEDURE `P_EAP_GETC_ORG_REALARION_ID_V1`(IN V_ORG_REALATION_ID VARCHAR (36))
+BEGIN
+DECLARE sTempChd VARCHAR(36);
+#DECLARE LoopNum int;
+SET@@group_concat_max_len = 300000;
+SET sTempChd = V_ORG_REALATION_ID;
+#set LoopNum = 0;
+DROP TEMPORARY TABLE IF EXISTS tmpOrgRealationId;
+DROP TEMPORARY TABLE IF EXISTS tmpOrgRealationId1;
+DROP TEMPORARY TABLE IF EXISTS tmpOrgRealationId_tmp;
+
+CREATE TEMPORARY TABLE tmpOrgRealationId  ENGINE = MEMORY (SELECT org_realation_id,ORG_ID
+	FROM t_eap_sys_organization_real
+	WHERE parent_org_realation_id=V_ORG_REALATION_ID or org_realation_id=V_ORG_REALATION_ID);
+
+ALTER table tmpOrgRealationId ADD PRIMARY key(org_realation_id);
+
+CREATE TEMPORARY TABLE tmpOrgRealationId_tmp like tmpOrgRealationId ;
+#INSERT  into tmpOrgRealationId_tmp SELECT org_realation_id,ORG_ID from tmpOrgRealationId ;
+
+CREATE TEMPORARY TABLE tmpOrgRealationId1  like tmpOrgRealationId ;
+INSERT  into tmpOrgRealationId1 SELECT org_realation_id,ORG_ID from tmpOrgRealationId ;
+
+#CREATE TEMPORARY TABLE tmpOrgRealationId1 (SELECT org_realation_id,ORG_ID FROM tmpOrgRealationId);
+
+
+WHILE sTempChd IS NOT NULL DO
+
+INSERT  into tmpOrgRealationId_tmp 
+SELECT t.org_realation_id,t.ORG_ID
+FROM t_eap_sys_organization_real t,tmpOrgRealationId1 tmp
+WHERE t.parent_org_realation_id = tmp.org_realation_id ;
+
+REPLACE  into tmpOrgRealationId SELECT org_realation_id,ORG_ID from tmpOrgRealationId_tmp ;
+
+set sTempChd = null ;
+SELECT org_realation_id into sTempChd from  tmpOrgRealationId_tmp LIMIT 1 ;
+
+TRUNCATE  table tmpOrgRealationId1;
+INSERT  into tmpOrgRealationId1 SELECT org_realation_id,ORG_ID from tmpOrgRealationId_tmp ;
+TRUNCATE table tmpOrgRealationId_tmp ;
+
+END WHILE;
+
+TRUNCATE  table tmpOrgRealationId1;
+INSERT  into tmpOrgRealationId1 (SELECT org_realation_id,ORG_ID FROM tmpOrgRealationId);
+
+END
