@@ -1,0 +1,27 @@
+CREATE  PROCEDURE `P_EAP_GETC_ORG_REALARION_ID_V0`(IN V_ORG_REALATION_ID VARCHAR (36))
+BEGIN
+DECLARE sTempChd MEDIUMTEXT;
+SET@@group_concat_max_len = 300000;
+SET sTempChd = V_ORG_REALATION_ID;
+DROP TEMPORARY TABLE IF EXISTS tmpOrgRealationId;
+DROP TEMPORARY TABLE IF EXISTS tmpOrgRealationId1;
+CREATE TEMPORARY TABLE tmpOrgRealationId ENGINE = MEMORY (SELECT org_realation_id,ORG_ID
+	FROM t_eap_sys_organization_real
+	WHERE parent_org_realation_id=V_ORG_REALATION_ID or org_realation_id=V_ORG_REALATION_ID);
+
+WHILE sTempChd IS NOT NULL DO
+
+SELECT group_concat(org_realation_id) INTO sTempChd
+FROM t_eap_sys_organization_real
+WHERE FIND_IN_SET(parent_org_realation_id,sTempChd) > 0;
+
+INSERT INTO tmpOrgRealationId  (ORG_REALATION_ID,ORG_ID) 
+SELECT org_realation_id,ORG_ID
+FROM   t_eap_sys_organization_real
+WHERE  FIND_IN_SET(parent_org_realation_id,sTempChd) > 0;
+
+END WHILE;
+
+CREATE TEMPORARY TABLE tmpOrgRealationId1 ENGINE = MEMORY (SELECT org_realation_id,ORG_ID FROM tmpOrgRealationId);
+
+END
